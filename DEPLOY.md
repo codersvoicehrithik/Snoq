@@ -4,11 +4,11 @@
 
 Create a Node web service from the repository, setting its root directory to `server`. Use build command `npm install && npm run db:generate && npm run build` and start command `npm run start`. Before or during deployment run `npm run db:deploy` against Neon. Set every backend variable from `server/.env.example`, including `FRONTEND_URL`, `DATABASE_URL`, `JWT_SECRET`, Cloudinary values, `RESEND_API_KEY`, `EMAIL_FROM`, and `COOKIE_SECURE=true`. Never add an API key to the static-site environment.
 
-Allow the exact Render static-site origin in `FRONTEND_URL`. The server uses credentialed CORS and HTTP-only cookies.
+Set `FRONTEND_URL=https://snoq.onrender.com` and `COOKIE_SECURE=true` on the API service. The server uses credentialed CORS and HTTP-only cookies, so these values must match the deployed static-site origin exactly.
 
 ## Frontend on Render
 
-Create a Static Site at root directory `client`, with build command `npm install && npm run build` and publish directory `dist`. Set `VITE_API_URL=https://YOUR-API.onrender.com/api`. Configure the SPA rewrite `/* → /index.html`; `render.yaml` contains both services as a starting point.
+Create a Static Site at root directory `client`, with build command `npm install && npm run build` and publish directory `dist`. Set `VITE_API_URL=https://apisnoq.onrender.com/api` (HTTPS is required when the static site is served over HTTPS). Configure the SPA rewrite `/* → /index.html`; `render.yaml` contains both services as a starting point.
 
 ## Neon, Cloudinary, and OAuth
 
