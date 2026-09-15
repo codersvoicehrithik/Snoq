@@ -6,6 +6,8 @@ Create a Node web service from the repository, setting its root directory to `se
 
 Set `FRONTEND_URL=https://snoq.onrender.com` and `COOKIE_SECURE=true` on the API service. The server uses credentialed CORS and HTTP-only cookies, so these values must match the deployed static-site origin exactly.
 
+For password reset email, set `RESEND_API_KEY` and `EMAIL_FROM` on the API service. `EMAIL_FROM` must use a domain verified in Resend, for example `SNOQ <noreply@your-verified-domain.com>`. Resend's unverified test sender can deliver only to the email address that owns the Resend account.
+
 ## Frontend on Render
 
 Create a Static Site at root directory `client`, with build command `npm install && npm run build` and publish directory `dist`. Set `VITE_API_URL=https://apisnoq.onrender.com/api` (HTTPS is required when the static site is served over HTTPS). Configure the SPA rewrite `/* → /index.html`; `render.yaml` contains both services as a starting point.

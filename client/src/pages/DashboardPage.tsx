@@ -34,8 +34,8 @@ export function DashboardPage() {
   ];
 
   return <div className="pb-0">
-    <section className="mb-5 flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-sm font-semibold text-vault-600">Your personal knowledge system</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Good to see you.</h1><p className="mt-2 max-w-xl text-slate-500">Everything worth keeping, ready when you need it.</p></div>
+    <section className="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div><p className="text-xs font-bold uppercase tracking-[.08em] text-vault-600">Your personal knowledge system</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Good to see you.</h1><p className="mt-1 max-w-xl text-sm text-slate-500">Everything worth keeping, ready when you need it.</p></div>
       <Link className="btn-primary shrink-0" to="/add"><Plus className="mr-2" size={17} />Add a resource</Link>
     </section>
 

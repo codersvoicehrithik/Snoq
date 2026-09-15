@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { draftStore } from '../lib/draft';
 import type { Analysis, Draft, Resource, ResourceList } from '../types';
 import { Button, Card, Pill } from '../components/ui';
+import { useToast } from '../components/Toast';
 
 const blank: Analysis = { title:'', description:null, resourceType:'Other', categories:[], subcategories:[], tags:[], topics:[], capabilities:[], useCases:[], targetAudience:[], sourcePlatform:null, author:null, language:null, isAITool:false, aiCapabilities:[], summary:null, keywords:[] };
 const toArray = (value:string) => value.split(',').map(item=>item.trim()).filter(Boolean);
@@ -18,28 +19,28 @@ export function AddResourcePage() {
   const [draft,setDraft]=useState<Draft>(restored??{...blank,kind:'URL'});
   const [documentFile,setDocumentFile]=useState<File|null>(null);
   const {data:listsData}=useQuery({queryKey:['lists'],queryFn:()=>api<{lists:ResourceList[]}>('/lists')});
-  const [message,setMessage]=useState(restored?'An unfinished draft was restored.':'');
-  const [error,setError]=useState('');
+  const { notify } = useToast();
   const set = (key:keyof Draft,value:unknown) => setDraft(current=>({...current,[key]:value}));
   const aiProvenance=(ai:{status:string;provider:string|null;model:string|null})=>({provider:ai.provider,model:ai.model,primaryProvider:null,fallbackProvider:null,status:ai.status==='FAILED'?'FAILED' as const:'SUCCESS' as const});
   const urlAnalysis=useMutation({
     mutationFn:()=>api<{analysis:Analysis;ai:{status:string;provider:string|null;model:string|null;fallbackUsed:boolean};source:{url:string;normalizedUrl:string;thumbnailUrl?:string;faviconUrl?:string}}>('/resources/analyze-url',{method:'POST',body:JSON.stringify({url})}),
-    onSuccess:data=>{setDraft({...data.analysis,kind:'URL',url:data.source.url,normalizedUrl:data.source.normalizedUrl,thumbnailUrl:data.source.thumbnailUrl,faviconUrl:data.source.faviconUrl,provenance:aiProvenance(data.ai)});setMessage(data.ai.status==='FAILED'?'AI analysis is unavailable. You can continue manually.':data.ai.fallbackUsed?'Analysis completed with the fallback AI provider.':'AI metadata is ready to review.');setError('');},
-    onError:reason=>setError(reason instanceof Error?reason.message:'Could not analyze this URL')
+    onSuccess:data=>{setDraft({...data.analysis,kind:'URL',url:data.source.url,normalizedUrl:data.source.normalizedUrl,thumbnailUrl:data.source.thumbnailUrl,faviconUrl:data.source.faviconUrl,provenance:aiProvenance(data.ai)});notify(data.ai.status==='FAILED'?'AI analysis is unavailable. You can continue manually.':data.ai.fallbackUsed?'Analysis completed with the fallback AI provider.':'AI metadata is ready to review.',data.ai.status==='FAILED'?'info':'success');},
+    onError:reason=>notify(reason instanceof Error?reason.message:'Could not analyze this URL','error')
   });
   const documentAnalysis=useMutation({
     mutationFn:(file:File)=>{const form=new FormData();form.append('file',file);return api<{analysis:Analysis;ai:{status:string;provider:string|null;model:string|null};document:{originalFilename:string;mimeType:string;size:number}}>('/resources/analyze-document',{method:'POST',body:form});},
-    onSuccess:data=>{setDraft({...data.analysis,kind:'DOCUMENT',provenance:aiProvenance(data.ai)});setMessage(data.ai.status==='FAILED'?'AI analysis is unavailable. Complete the details manually; the document will upload only when you save.':'Document metadata is ready to review. The file will upload when you save.');setError('');},
-    onError:reason=>setError(reason instanceof Error?`${reason.message}. Complete the details manually; the document will upload only when you save.`:'Could not analyze this document. Complete the details manually; the document will upload only when you save.')
+    onSuccess:data=>{setDraft({...data.analysis,kind:'DOCUMENT',provenance:aiProvenance(data.ai)});notify(data.ai.status==='FAILED'?'AI analysis is unavailable. Complete the details manually; the document will upload only when you save.':'Document metadata is ready to review. The file will upload only when you save.',data.ai.status==='FAILED'?'info':'success');},
+    onError:reason=>notify(reason instanceof Error?`${reason.message}. Complete the details manually; the document will upload only when you save.`:'Could not analyze this document. Complete the details manually; the document will upload only when you save.','error')
   });
   const save=useMutation({
     mutationFn:()=>{if(mode==='DOCUMENT'){if(!documentFile)throw new Error('Choose a document before saving');const form=new FormData();form.append('file',documentFile);form.append('payload',JSON.stringify({...draft,kind:mode,document:undefined}));return api<{resource:Resource}>('/resources',{method:'POST',body:form});}return api<{resource:Resource}>('/resources',{method:'POST',body:JSON.stringify({...draft,kind:mode})});},
-    onSuccess:()=>{draftStore.clear();void queryClient.invalidateQueries({queryKey:['resources']});void queryClient.invalidateQueries({queryKey:['dashboard']});void queryClient.invalidateQueries({queryKey:['categories']});navigate('/library');},
-    onError:reason=>setError(reason instanceof Error?reason.message:'Could not save resource')
+    onSuccess:()=>{draftStore.clear();void queryClient.invalidateQueries({queryKey:['resources']});void queryClient.invalidateQueries({queryKey:['dashboard']});void queryClient.invalidateQueries({queryKey:['categories']});notify('Resource saved to your vault.');navigate('/library');},
+    onError:reason=>notify(reason instanceof Error?reason.message:'Could not save resource','error')
   });
   useEffect(()=>{if(draft.title||url||draft.document)draftStore.write({...draft,kind:mode,url});},[draft,url,mode]);
-  const reset=()=>{setDraft({...blank,kind:mode});setDocumentFile(null);setUrl('');draftStore.clear();setMessage('Draft cleared.');};
-  const selectDocument=(file:File)=>{setDocumentFile(file);setDraft({...blank,kind:'DOCUMENT',title:file.name.replace(/\.[^.]+$/,''),resourceType:'Document'});setMessage('Analyzing document metadata. The file stays on this device until you save.');setError('');documentAnalysis.mutate(file);};
+  useEffect(()=>{if(restored)notify('An unfinished draft was restored.','info');},[notify,restored]);
+  const reset=()=>{setDraft({...blank,kind:mode});setDocumentFile(null);setUrl('');draftStore.clear();notify('Draft cleared.','info');};
+  const selectDocument=(file:File)=>{setDocumentFile(file);setDraft({...blank,kind:'DOCUMENT',title:file.name.replace(/\.[^.]+$/,''),resourceType:'Document'});notify('Analyzing document metadata. The file stays on this device until you save.','info');documentAnalysis.mutate(file);};
   return <div className="mx-auto max-w-4xl">
     <div className="mb-8"><p className="text-sm font-semibold text-vault-600">Capture it while it matters</p><h1 className="mt-2 text-3xl font-bold">Add to your vault</h1><p className="mt-2 text-slate-500">AI builds the first draft. You keep the final say.</p></div>
     <div className="mb-6 flex w-fit rounded-xl bg-slate-100 p-1">
@@ -48,7 +49,6 @@ export function AddResourcePage() {
     </div>
     <Card className="p-5 sm:p-7">
       {mode==='URL'?<form className="flex flex-col gap-3 sm:flex-row" onSubmit={event=>{event.preventDefault();if(url&&!urlAnalysis.isPending)urlAnalysis.mutate();}}><input className="field flex-1" type="url" value={url} onChange={event=>setUrl(event.target.value)} placeholder="Paste a useful URL"/><Button type="submit" disabled={!url||urlAnalysis.isPending}>{urlAnalysis.isPending?'Analyzing…':<><Sparkles className="mr-2" size={16}/>Analyze with AI</>}</Button></form>:<label className="grid cursor-pointer place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center hover:border-vault-500"><FileUp className="mb-3 text-vault-600"/><span className="font-semibold">{documentFile?documentFile.name:'Drop a document or choose a file'}</span><span className="mt-1 text-sm text-slate-500">PDF, DOCX, TXT, JSON, CSV, Markdown, or HTML · 10 MB max</span><input className="sr-only" type="file" accept=".pdf,.docx,.txt,.md,.json,.csv,.html,.htm" onChange={event=>event.target.files?.[0]&&selectDocument(event.target.files[0])}/></label>}
-      {(documentAnalysis.isPending||message||error)&&<div className={`mt-5 rounded-xl p-3 text-sm ${error?'bg-rose-50 text-rose-700':'bg-vault-50 text-vault-700'}`}>{documentAnalysis.isPending?'Analyzing document metadata. The file will upload only when you save.':error||message}</div>}
     </Card>
     {(draft.title||documentFile)&&<MetadataForm draft={draft} lists={listsData?.lists??[]} set={set} saving={save.isPending} onSave={()=>save.mutate()} onReset={reset}/>} 
   </div>;

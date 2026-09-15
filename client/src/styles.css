@@ -6,7 +6,11 @@
 .dark body { background:#0b1220; color:#e5edf9; }
 .dark .card, .dark .bg-white { background-color:#111c2e; border-color:#26334a; }
 .dark .bg-slate-50, .dark .bg-slate-50\/70, .dark .bg-slate-100 { background-color:#18243a; }
+.dark .landing-page { background:radial-gradient(circle at top left, #172a54 0%, #0b1220 48%, #101c2c 100%); }
 .dark .text-ink, .dark .text-slate-700, .dark .text-slate-600 { color:#e5edf9; }
+.dark .hover\:text-ink:hover { color:#ffffff; }
+.hover\:text-vault-500:hover, .hover\:text-vault-600:hover { color:#334155; }
+.dark .hover\:text-vault-500:hover, .dark .hover\:text-vault-600:hover { color:#ffffff; }
 .dark .text-slate-500, .dark .text-slate-400 { color:#9aabc4; }
 .dark .border-slate-200, .dark .border-slate-100 { border-color:#26334a; }
 .dark .field { background:#111c2e; border-color:#33445f; color:#e5edf9; }

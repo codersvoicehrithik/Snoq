@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { InformationPage } from './pages/InformationPage';
 import { LibraryPage } from './pages/LibraryPage';
+import { LandingPage } from './pages/LandingPage';
 import { ListsPage } from './pages/ListsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -25,6 +26,7 @@ function PageMeta() {
   useEffect(() => {
     const pages: Record<string, [string, string]> = {
       '/': ['SNOQ | Your AI-powered resource vault', 'Organize useful links, documents, and ideas in your SNOQ vault.'],
+      '/dashboard': ['SNOQ Dashboard | Your resource vault', 'Your private SNOQ dashboard for resources, documents, and lists.'],
       '/docs': ['SNOQ Documentation | Organize your knowledge', 'Learn how to save, organize, search, and revisit resources in SNOQ.'],
       '/about': ['About SNOQ | Built by Codersvoice', 'Learn about SNOQ, the AI-powered resource vault built by Codersvoice.'],
       '/privacy': ['SNOQ Privacy | Your vault belongs to you', 'Read how SNOQ handles account information and saved resources.'],
@@ -49,11 +51,12 @@ class AppErrorBoundary extends Component<PropsWithChildren, { failed: boolean }>
 export function App() {
   return <AppErrorBoundary><PageMeta /><Routes>
     <Route element={<PublicLayout />}>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} /><Route path="/forgot-password" element={<ForgotPasswordPage />} /><Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/docs" element={<InformationPage />} /><Route path="/about" element={<InformationPage />} /><Route path="/privacy" element={<InformationPage />} /><Route path="/terms" element={<InformationPage />} />
     </Route>
     <Route element={<Guard />}>
-      <Route path="/" element={<DashboardPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/lists" element={<ListsPage />} /><Route path="/favorites" element={<LibraryPage favorite />} /><Route path="/archived" element={<LibraryPage archived />} /><Route path="/add" element={<AddResourcePage />} /><Route path="/settings" element={<SettingsPage />} />
+      <Route path="/dashboard" element={<DashboardPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/lists" element={<ListsPage />} /><Route path="/favorites" element={<LibraryPage favorite />} /><Route path="/archived" element={<LibraryPage archived />} /><Route path="/add" element={<AddResourcePage />} /><Route path="/settings" element={<SettingsPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes></AppErrorBoundary>;
