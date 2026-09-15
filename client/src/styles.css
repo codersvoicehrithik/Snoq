@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base { body {@apply bg-slate-50 text-ink antialiased;} button,input,textarea,select {@apply focus:outline-none focus:ring-2 focus:ring-vault-500/30;} }
+@layer components { .card {@apply rounded-2xl border border-slate-200 bg-white shadow-sm;} .btn {@apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;} .btn-primary {@apply btn bg-vault-600 text-white hover:bg-vault-500;} .btn-muted {@apply btn bg-slate-100 text-slate-700 hover:bg-slate-200;} .field {@apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm placeholder:text-slate-400;} .label {@apply mb-1.5 block text-xs font-bold uppercase tracking-[.08em] text-slate-500;} }
+.dark body { background:#0b1220; color:#e5edf9; }
+.dark .card, .dark .bg-white { background-color:#111c2e; border-color:#26334a; }
+.dark .bg-slate-50, .dark .bg-slate-50\/70, .dark .bg-slate-100 { background-color:#18243a; }
+.dark .text-ink, .dark .text-slate-700, .dark .text-slate-600 { color:#e5edf9; }
+.dark .text-slate-500, .dark .text-slate-400 { color:#9aabc4; }
+.dark .border-slate-200, .dark .border-slate-100 { border-color:#26334a; }
+.dark .field { background:#111c2e; border-color:#33445f; color:#e5edf9; }
+.dark .bg-vault-50 { background-color:#182a4d; }
+.dark .bg-vault-100 { background-color:#213866; }
+.dark .text-vault-700, .dark .text-vault-600 { color:#a9c1ff; }
+.dark .border-vault-500 { border-color:#5d88ff; }
+.dark .hover\:bg-slate-50:hover, .dark .hover\:bg-slate-100:hover { background-color:#24334e; }
+.dark .btn-muted { background:#1c2a43; color:#e5edf9; }
+.dark .btn-muted:hover { background:#2a3d5d; }
+.dark .bg-emerald-50 { background-color:#10352d; }
+.dark .text-emerald-700 { color:#7ee0bb; }
+.dark .bg-amber-50 { background-color:#3a2d14; }
+.dark .text-amber-600, .dark .text-amber-700 { color:#f7ca72; }
+.dark .bg-violet-100 { background-color:#2e2650; }
+.dark .text-violet-700 { color:#c4b5fd; }
+.dark .bg-sky-100 { background-color:#123247; }
+.dark .text-sky-700 { color:#7dd3fc; }
+.dark .bg-indigo-50 { background-color:#202d59; }
+.dark .text-indigo-600 { color:#a5b4fc; }
+.dark .bg-rose-50 { background-color:#3d1d2a; }
+.dark .text-rose-700 { color:#ffa2b8; }
+.dark button:disabled { background-color:#263a61; color:#8fa1c0; }
+.dark footer { background-color:rgba(17,28,46,.9); }
+.public-shell > div:first-child > main { width:100%; }
+.app-container { width:100%; max-width:1280px; margin-inline:auto; }

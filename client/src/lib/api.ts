@@ -1,0 +1,2 @@
+const API=import.meta.env.VITE_API_URL??'http://localhost:4000/api';
+export async function api<T>(path:string,init?:RequestInit):Promise<T>{const response=await fetch(`${API}${path}`,{credentials:'include',headers:{...(init?.body instanceof FormData?{}:{'content-type':'application/json'}),...init?.headers},...init});if(response.status===204)return undefined as T;const body=await response.json().catch(()=>({message:'Request failed'}));if(!response.ok)throw new Error(body.message??'Request failed');return body as T;}

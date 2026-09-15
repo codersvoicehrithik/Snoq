@@ -1,0 +1,2 @@
+import type { NextFunction, Request, Response } from 'express'; import { verifySession } from '../services/auth.service.js';
+export function requireAuth(req: Request, res: Response, next: NextFunction) { try { const token = req.cookies?.rv_session; if (!token) return res.status(401).json({ message: 'Authentication required' }); req.auth = verifySession(token); next(); } catch { return res.status(401).json({ message: 'Session expired. Please sign in again.' }); } }

@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ResourceKind {
+  URL
+  DOCUMENT
+}
+
+enum AnalysisStatus {
+  SUCCESS
+  FAILED
+  MANUAL
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String?
+  name         String?
+  googleId     String?    @unique
+  avatarUrl    String?
+  avatarPublicId String?
+  createdAt    DateTime   @default(now())
+  resources    Resource[]
+  lists        ResourceList[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Resource {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           ResourceKind
+  title          String
+  description    String?      @db.Text
+  url            String?
+  normalizedUrl  String?
+  resourceType   String       @default("Other")
+  sourcePlatform String?
+  summary        String?      @db.Text
+  author         String?
+  thumbnailUrl   String?
+  faviconUrl     String?
+  contentHash    String?
+  language       String?
+  isAITool       Boolean      @default(false)
+  isFavorite     Boolean      @default(false)
+  archivedAt     DateTime?
+  lastAnalyzedAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  categories     ResourceCategory[]
+  tags           ResourceTag[]
+  analysis       AIAnalysis?
+  document       DocumentMetadata?
+  lists          ResourceListItem[]
+
+  @@index([userId, createdAt])
+  @@index([userId, normalizedUrl])
+  @@index([userId, isFavorite])
+  @@index([userId, archivedAt])
+  @@index([userId, resourceType])
+  @@unique([userId, normalizedUrl])
+}
+
+model ResourceList {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  color       String             @default("blue")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  resources   ResourceListItem[]
+
+  @@unique([userId, name])
+  @@index([userId, createdAt])
+}
+
+model ResourceListItem {
+  resourceId String
+  listId     String
+  resource   Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  list       ResourceList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+
+  @@id([resourceId, listId])
+  @@index([listId])
+}
+
+model Category {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  resources ResourceCategory[]
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  resources ResourceTag[]
+}
+
+model ResourceCategory {
+  resourceId String
+  categoryId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, categoryId])
+  @@index([categoryId])
+}
+
+model ResourceTag {
+  resourceId String
+  tagId      String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, tagId])
+  @@index([tagId])
+}
+
+model DocumentMetadata {
+  id                 String   @id @default(cuid())
+  resourceId         String   @unique
+  resource           Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  cloudinaryPublicId String
+  secureUrl          String
+  originalFilename   String
+  mimeType           String
+  size               Int
+  uploadedAt         DateTime @default(now())
+}
+
+model AIAnalysis {
+  id               String         @id @default(cuid())
+  resourceId       String         @unique
+  resource         Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  provider         String?
+  model            String?
+  primaryProvider  String?
+  fallbackProvider String?
+  status           AnalysisStatus
+  sourceType       String
+  schemaVersion    String         @default("1")
+  result           Json?
+  createdAt        DateTime       @default(now())
+}
