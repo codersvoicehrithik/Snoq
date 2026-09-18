@@ -21,6 +21,27 @@
 .dark .hover\:bg-slate-50:hover, .dark .hover\:bg-slate-100:hover { background-color:#24334e; }
 .dark .btn-muted { background:#1c2a43; color:#e5edf9; }
 .dark .btn-muted:hover { background:#2a3d5d; }
+.dark .btn-primary { background:#3d6cff; box-shadow:0 8px 22px rgba(61,108,255,.24); }
+.dark .btn-primary:hover { background:#5d88ff; color:#fff; box-shadow:0 10px 28px rgba(93,136,255,.42); }
+.dark .btn-muted { border:1px solid #314362; }
+.dark .btn-muted:hover { border-color:#6f93ed; color:#fff; box-shadow:0 0 0 3px rgba(93,136,255,.16); }
+.dark button:not(:disabled):focus-visible { outline:2px solid #8eacff; outline-offset:2px; }
+.action-info { background:#e8f0ff; border:1px solid #b8ccff; color:#254bb7; }
+.action-info:hover { background:#dbe8ff; border-color:#85a8ff; }
+.action-warning { background:#fff7db; border:1px solid #f2d36d; color:#8a5a00; }
+.action-warning:hover { background:#ffedb0; border-color:#e2ae24; }
+.action-success { background:#e4f8ee; border:1px solid #8edab5; color:#137149; }
+.action-success:hover { background:#cef1df; border-color:#44bd7c; }
+.action-danger { background:#ffebee; border:1px solid #f3a3af; color:#b4233b; }
+.action-danger:hover { background:#ffd7de; border-color:#e25570; }
+.dark .action-info { background:#1c3566; border-color:#3f68be; color:#c6d7ff; }
+.dark .action-info:hover { background:#284d91; border-color:#79a0ff; color:#fff; }
+.dark .action-warning { background:#4a3511; border-color:#9c7421; color:#ffdc84; }
+.dark .action-warning:hover { background:#654a12; border-color:#e3b53f; color:#fff3c7; }
+.dark .action-success { background:#123e31; border-color:#2f8b68; color:#9ef0c9; }
+.dark .action-success:hover { background:#185644; border-color:#57d39e; color:#e3fff1; }
+.dark .action-danger { background:#4a1d2c; border-color:#9c4057; color:#ffb4c1; }
+.dark .action-danger:hover { background:#642439; border-color:#ee6f8c; color:#fff0f3; }
 .dark .bg-emerald-50 { background-color:#10352d; }
 .dark .text-emerald-700 { color:#7ee0bb; }
 .dark .bg-amber-50 { background-color:#3a2d14; }

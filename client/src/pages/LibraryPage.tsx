@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ChevronLeft, ChevronRight, Download, Edit3, ExternalLink, Eye, FileText, Search, Star, Trash2, Undo2, X } from 'lucide-react';
+import { Archive, ChevronLeft, ChevronRight, Download, Edit3, ExternalLink, Eye, FileSpreadsheet, FileText, RefreshCw, Search, Star, Trash2, Undo2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { Resource } from '../types';
 import { Button, Card, Pill } from '../components/ui';
-import { useToast } from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const apiRoot = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 type ResourcePage = { resources: Resource[]; total: number; page: number; pageSize: number; totalPages: number };
@@ -36,7 +36,7 @@ export function LibraryPage({ favorite = false, archived = false }: { favorite?:
   query.set('page', String(page));
   query.set('limit', '18');
 
-  const { data: response, isLoading } = useQuery({ queryKey: ['resources', query.toString()], queryFn: () => api<ResourcePage | Resource[] | LegacyResourceResponse>(`/resources?${query}`) });
+  const { data: response, isLoading, isError, error, refetch } = useQuery({ queryKey: ['resources', query.toString()], queryFn: () => api<ResourcePage | Resource[] | LegacyResourceResponse>(`/resources?${query}`), retry: 1 });
   const data: ResourcePage | undefined = Array.isArray(response)
     ? { resources: response, total: response.length, page: 1, pageSize: response.length, totalPages: 1 }
     : response && 'resources' in response && !Array.isArray(response.resources) && 'total' in response.resources
@@ -55,9 +55,9 @@ export function LibraryPage({ favorite = false, archived = false }: { favorite?:
   const filtering = Boolean(search || kind || category || sort !== 'newest');
 
   return <>
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-vault-600">{archived ? 'Stored away' : listId ? 'Curated collection' : 'Searchable knowledge'}</p><h1 className="mt-2 text-3xl font-bold">{title}</h1><p className="mt-1 text-sm text-slate-500">{data ? `${data.total.toLocaleString()} resource${data.total === 1 ? '' : 's'}` : 'Loading your vault'}</p></div>{listId && <Link className="btn-muted" to="/lists"><X className="mr-2" size={16} />All lists</Link>}</div>
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-vault-600">{archived ? 'Stored away' : listId ? 'Curated collection' : 'Searchable knowledge'}</p><h1 className="mt-2 text-3xl font-bold">{title}</h1><p className="mt-1 text-sm text-slate-500">{data ? `${data.total.toLocaleString()} resource${data.total === 1 ? '' : 's'}` : isError ? 'Could not load your vault' : 'Loading your vault'}</p></div><div className="flex flex-wrap gap-2">{!archived && !favorite && <Link className="btn-muted" to="/settings#reports"><FileSpreadsheet className="mr-2" size={16} />Reports</Link>}{listId && <Link className="btn-muted" to="/lists"><X className="mr-2" size={16} />All lists</Link>}</div></div>
     <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_150px_150px_170px_auto]"><div className="relative"><Search className="absolute left-3 top-3 text-slate-400" size={18} /><input className="field pl-10" placeholder="Search titles, tags, categories, or descriptions" value={search} onChange={change(setSearch)} /></div><select className="field" aria-label="Filter by kind" value={kind} onChange={change(setKind)}><option value="">All resources</option><option value="URL">Links and tools</option><option value="DOCUMENT">Documents</option></select><select className="field" aria-label="Filter by category" value={category} onChange={change(setCategory)}><option value="">All categories</option>{categoryData?.categories.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select><select className="field" aria-label="Sort resources" value={sort} onChange={change(setSort)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="updated">Recently updated</option><option value="favorites">Favorites first</option><option value="title">Title A–Z</option></select>{filtering && <button className="px-3 text-sm font-semibold text-slate-500 hover:text-vault-600" onClick={clearFilters}>Clear</button>}</div></section>
-    {isLoading ? <p className="text-slate-500">Loading resources…</p> : <><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    {isLoading ? <p className="text-slate-500">Loading resources…</p> : isError ? <Card className="py-16 text-center"><h2 className="font-bold">Your resources could not be loaded</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">{error instanceof Error ? error.message : 'Please try again.'}</p><Button variant="muted" className="mt-5" onClick={() => void refetch()}><RefreshCw className="mr-2" size={16} />Try again</Button></Card> : <><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {data?.resources.map((resource) => <ResourceCard key={resource.id} resource={resource} archived={archived} pending={action.isPending || update.isPending || remove.isPending} onPreview={() => setPreview(resource)} onEdit={() => setEditing(resource)} onDelete={() => setDeleting(resource)} onAction={(next) => action.mutate({ id: resource.id, action: next })} />)}
       {data?.resources.length === 0 && <Card className="col-span-full py-16 text-center"><h2 className="font-bold">Nothing here yet</h2><p className="mt-2 text-sm text-slate-500">Try a different search, adjust the filters, or add your next useful find.</p>{!archived && !favorite && <Link className="btn-primary mt-5" to="/add">Add resource</Link>}</Card>}
     </div>{data && data.totalPages > 1 && <nav className="mt-7 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" aria-label="Resource pages"><p className="text-slate-500">Page {data.page} of {data.totalPages}</p><div className="flex gap-2"><Button variant="muted" className="px-3" disabled={data.page <= 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft size={17} />Previous</Button><Button variant="muted" className="px-3" disabled={data.page >= data.totalPages} onClick={() => setPage((value) => value + 1)}>Next<ChevronRight className="ml-1" size={17} /></Button></div></nav>}</>}

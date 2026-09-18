@@ -1,31 +1,39 @@
-# SNOQ interview notes
+# SNOQ implementation notes
 
 ## Architecture
 
-**Why React/Vite and Express?** Vite produces a static bundle suitable for Render Static Sites, while Express keeps authentication, external API calls, and secrets in an independently deployable backend. REST is sufficient for the resource CRUD and ingestion workflow; microservices would add operational cost without helping V1.
+SNOQ uses a React/Vite static client and an Express/Prisma API. The separation keeps sessions, credentials, billing events, AI-provider calls, document storage, reports, and email delivery on the backend. PostgreSQL owns relational application data; Cloudinary stores document binaries independently of ephemeral application disks.
 
-**Why Neon, PostgreSQL, and Prisma?** PostgreSQL supports durable relational ownership, relationships between resources/tags/categories, and a path to full-text search and later pgvector. Neon provides managed serverless PostgreSQL. Prisma gives typed migrations and query access.
+## Authentication and data isolation
 
-**Why Cloudinary?** Render disks are ephemeral. PostgreSQL keeps document metadata and Cloudinary persists the binary independently of API instances.
+Passwords are bcrypt-hashed. The API issues an HTTP-only signed session cookie and derives the user from that cookie, never from a browser-supplied user ID. Resource, list, share-management, document-view/download, personal-export, and administrator queries enforce owner or role scopes on the server.
 
-## Authentication and isolation
+The administrator UI is never the authorization boundary. Every `/api/admin/*` route runs both session and database-role checks. The `ADMIN_EMAIL` bootstrap setting grants that role at sign-in, while administrators can manage other accounts from the control panel.
 
-Passwords are bcrypt-hashed. The API signs an HTTP-only seven-day cookie and derives `userId` from its verified JWT, never from the request body. Every resource service query contains `userId`; a guessed resource ID cannot cross the ownership boundary. Google identity tokens are verified through Google's library before the same session is issued.
+## AI-assisted capture
 
-## AI design
+AI providers implement a shared contract. Gemini and OpenRouter adapters return a Zod-validated metadata structure, allowing the API to try a configured eligible fallback. Provider failures do not block the primary product flow: a user can review/edit the draft or save manually.
 
-`AIProvider` isolates provider contracts. `GeminiProvider` and `OpenRouterProvider` both accept extracted context and return the same Zod-validated analysis schema. The router calls one configured primary, classifies the error, and makes at most one fallback call. Quota, 429, upstream error, timeout, model unavailability, provider auth failure, and invalid output may use fallback; malformed application requests do not. If both fail, the analysis endpoint returns manual-mode fields and the resource can still be saved.
+URL extraction is intentionally separate from AI analysis. It limits protocols, ports, redirects, private network targets, DNS resolution, body size, and fetch duration before any external content is processed.
 
-Adding a third provider requires its adapter, environment config, and registration in the provider registry; URL extraction, resource CRUD, and the client do not change. Prompts request JSON only, context is capped, and Zod rejects malformed/provider-specific output.
+## Sharing
 
-## Ingestion and security
+Lists are owned by one account. A public share has an opaque slug; a restricted share collects an access request, lets the owner approve it, and sends an access token only after approval. Tokens are stored as hashes. Branded email templates make the request and approval flow understandable without exposing internal data.
 
-The API extracts Open Graph, canonical URL, favicon, author, visible text, and basic metadata before AI. This reduces hallucination and avoids giving an AI arbitrary browsing authority. The fetcher rejects non-HTTP(S), localhost, private IPv4 ranges, common private IPv6 ranges, and revalidates redirects. It caps response size and redirects.
+## Plans, coupons, and payment
 
-Document uploads use memory only during processing, validate size and practical MIME/extension formats, never execute files, then upload to Cloudinary. Unsupported formats can remain a future manual-only upload path; V1 does not claim to analyze arbitrary binary data.
+Plans define price, duration, and AI-credit allowance. Administrators create, edit, hide, activate, and deactivate plans. Coupons may target a plan, have a validity window and redemption cap, or grant time for 100%-off flows. Razorpay checkout derives the amount and entitlement server-side. Signed webhooks use durable idempotency records so duplicate provider deliveries do not activate the same subscription twice.
 
-## Search and scale
+## Reports and exports
 
-V1 uses case-insensitive fields and tag/category matching, scoped to each user. Production evolution should add weighted PostgreSQL `tsvector` plus `pg_trgm` indexes, then optionally pgvector hybrid retrieval without a new database service. At 100,000 users, add pagination, async ingestion jobs, per-provider rate limits, queue-backed document extraction, cache duplicate analysis by normalized URL/content hash, and tighter observability.
+Administrators can generate current Excel and PDF reports with user, subscription, and coupon information. The reports are generated in memory by the server after admin authorization and are returned as private, non-cacheable attachments.
 
-If providers become expensive, limit context, deduplicate requests, rate-limit reanalysis, choose less expensive configured models, and only call AI when the user explicitly requests it. Provider outages do not block the core save workflow.
+Users on a plan with reports enabled can export the entire vault or a selected owned list. Administrators configure that entitlement per plan; the migration enables it for existing paid plans and leaves the complimentary plan locked. The Excel export is structured for reuse; the white, tabular PDF is formatted for reading and includes clickable Open buttons for saved URL resources. The email workflow intentionally derives the recipient from the authenticated account, attaches the PDF, and does not accept a destination email from the browser. Result sizes are capped to keep the operation reliable.
+
+The PDF is not a plain data dump: it repeats the owner header, light owner-email watermark, resource-table heading, branded footer links, and page number on every page. This makes shared internal reports readable while preserving a clear privacy signal. Empty collections receive an intentional empty state rather than a blank table.
+
+## Security and scaling
+
+Input validation uses Zod, database calls use Prisma, browser state-changing calls use an origin guard, security headers are added at the API, and high-cost/sensitive flows have specific rate limits. In-process rate limits are suitable for a single small service; a multi-instance production system should move limits and asynchronous broadcasts/reports to shared infrastructure such as Redis and a queue.
+
+For higher volume, add pagination/streamed report generation, background export jobs with encrypted temporary storage and expiry, audit logs for administrative actions, email verification/MFA, and malware scanning before broad document-upload access.

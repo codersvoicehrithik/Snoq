@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import type { ResourceAnalysis } from '../schemas/resource.schemas.js';
 
 type Saved = ResourceAnalysis & { kind: 'URL' | 'DOCUMENT'; url?: string | null; normalizedUrl?: string | null; thumbnailUrl?: string | null; faviconUrl?: string | null; isFavorite?: boolean; listIds?: string[]; document?: { cloudinaryPublicId: string; secureUrl: string; originalFilename: string; mimeType: string; size: number }; provenance?: { provider: string | null; model: string | null; primaryProvider: string | null; fallbackProvider: string | null; status: 'SUCCESS' | 'FAILED' | 'MANUAL' } };
-const include = { categories: { include: { category: true } }, tags: { include: { tag: true } }, document: true, analysis: true, lists: { include: { list: true } } } satisfies Prisma.ResourceInclude;
+const include = { categories: { include: { category: true } }, tags: { include: { tag: true } }, document: { select: { originalFilename: true, mimeType: true, size: true } }, analysis: true, lists: { include: { list: true } } } satisfies Prisma.ResourceInclude;
 const clean = (values: string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean).map((value) => value.slice(0, 80)))];
 
 async function verifiedListIds(userId: string, listIds: string[] = []) {
@@ -16,7 +16,7 @@ async function verifiedListIds(userId: string, listIds: string[] = []) {
 }
 
 export const resourceService = {
-  async list(userId: string, query: { search?: string; category?: string; type?: string; kind?: string; favorite?: string; archived?: string; list?: string; sort?: string; page?: string; limit?: string }) {
+  async list(userId: string, query: { search?: string; category?: string; type?: string; kind?: string; favorite?: string; archived?: string; list?: string; sort?: string; page?: string | number; limit?: string | number }) {
     const archived = query.archived === 'true';
     const where: Prisma.ResourceWhereInput = { userId, archivedAt: archived ? { not: null } : null };
     if (query.type) where.resourceType = query.type;
@@ -25,8 +25,8 @@ export const resourceService = {
     if (query.category) where.categories = { some: { category: { name: query.category } } };
     if (query.list) where.lists = { some: { listId: query.list } };
     if (query.search) { const q = query.search; where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }, { summary: { contains: q, mode: 'insensitive' } }, { tags: { some: { tag: { name: { contains: q, mode: 'insensitive' } } } } }, { categories: { some: { category: { name: { contains: q, mode: 'insensitive' } } } } }]; }
-    const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
-    const pageSize = Math.min(48, Math.max(6, Number.parseInt(query.limit ?? '18', 10) || 18));
+    const page = Math.max(1, Number.parseInt(String(query.page ?? '1'), 10) || 1);
+    const pageSize = Math.min(48, Math.max(6, Number.parseInt(String(query.limit ?? '18'), 10) || 18));
     const orderBy: Prisma.ResourceOrderByWithRelationInput[] = query.sort === 'oldest'
       ? [{ createdAt: 'asc' }]
       : query.sort === 'title'
@@ -44,6 +44,7 @@ export const resourceService = {
   },
 
   async get(userId: string, id: string) { return prisma.resource.findFirst({ where: { id, userId }, include }); },
+  async getDocument(userId: string, id: string) { return prisma.resource.findFirst({ where: { id, userId }, select: { document: { select: { secureUrl: true, originalFilename: true, mimeType: true } } } }); },
 
   async save(userId: string, data: Saved) {
     if (data.normalizedUrl) { const existing = await prisma.resource.findFirst({ where: { userId, normalizedUrl: data.normalizedUrl } }); if (existing) throw Object.assign(new Error('This resource already exists in your vault'), { status: 409, resourceId: existing.id }); }

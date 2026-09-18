@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import { draftStore } from '../lib/draft';
 import type { Analysis, Draft, Resource, ResourceList } from '../types';
 import { Button, Card, Pill } from '../components/ui';
-import { useToast } from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const blank: Analysis = { title:'', description:null, resourceType:'Other', categories:[], subcategories:[], tags:[], topics:[], capabilities:[], useCases:[], targetAudience:[], sourcePlatform:null, author:null, language:null, isAITool:false, aiCapabilities:[], summary:null, keywords:[] };
 const toArray = (value:string) => value.split(',').map(item=>item.trim()).filter(Boolean);
@@ -24,12 +24,12 @@ export function AddResourcePage() {
   const aiProvenance=(ai:{status:string;provider:string|null;model:string|null})=>({provider:ai.provider,model:ai.model,primaryProvider:null,fallbackProvider:null,status:ai.status==='FAILED'?'FAILED' as const:'SUCCESS' as const});
   const urlAnalysis=useMutation({
     mutationFn:()=>api<{analysis:Analysis;ai:{status:string;provider:string|null;model:string|null;fallbackUsed:boolean};source:{url:string;normalizedUrl:string;thumbnailUrl?:string;faviconUrl?:string}}>('/resources/analyze-url',{method:'POST',body:JSON.stringify({url})}),
-    onSuccess:data=>{setDraft({...data.analysis,kind:'URL',url:data.source.url,normalizedUrl:data.source.normalizedUrl,thumbnailUrl:data.source.thumbnailUrl,faviconUrl:data.source.faviconUrl,provenance:aiProvenance(data.ai)});notify(data.ai.status==='FAILED'?'AI analysis is unavailable. You can continue manually.':data.ai.fallbackUsed?'Analysis completed with the fallback AI provider.':'AI metadata is ready to review.',data.ai.status==='FAILED'?'info':'success');},
+    onSuccess:data=>{void queryClient.invalidateQueries({queryKey:['membership']});setDraft({...data.analysis,kind:'URL',url:data.source.url,normalizedUrl:data.source.normalizedUrl,thumbnailUrl:data.source.thumbnailUrl,faviconUrl:data.source.faviconUrl,provenance:aiProvenance(data.ai)});notify(data.ai.status==='FAILED'?'AI analysis is unavailable. You can continue manually.':data.ai.fallbackUsed?'Analysis completed with the fallback AI provider.':'AI metadata is ready to review.',data.ai.status==='FAILED'?'info':'success');},
     onError:reason=>notify(reason instanceof Error?reason.message:'Could not analyze this URL','error')
   });
   const documentAnalysis=useMutation({
     mutationFn:(file:File)=>{const form=new FormData();form.append('file',file);return api<{analysis:Analysis;ai:{status:string;provider:string|null;model:string|null};document:{originalFilename:string;mimeType:string;size:number}}>('/resources/analyze-document',{method:'POST',body:form});},
-    onSuccess:data=>{setDraft({...data.analysis,kind:'DOCUMENT',provenance:aiProvenance(data.ai)});notify(data.ai.status==='FAILED'?'AI analysis is unavailable. Complete the details manually; the document will upload only when you save.':'Document metadata is ready to review. The file will upload only when you save.',data.ai.status==='FAILED'?'info':'success');},
+    onSuccess:data=>{void queryClient.invalidateQueries({queryKey:['membership']});setDraft({...data.analysis,kind:'DOCUMENT',provenance:aiProvenance(data.ai)});notify(data.ai.status==='FAILED'?'AI analysis is unavailable. Complete the details manually; the document will upload only when you save.':'Document metadata is ready to review. The file will upload only when you save.',data.ai.status==='FAILED'?'info':'success');},
     onError:reason=>notify(reason instanceof Error?`${reason.message}. Complete the details manually; the document will upload only when you save.`:'Could not analyze this document. Complete the details manually; the document will upload only when you save.','error')
   });
   const save=useMutation({

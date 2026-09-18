@@ -1,35 +1,45 @@
-# SNOQ
+# SNOQ — Your AI-organized resource space
 
-SNOQ is a private AI-assisted library for URLs and documents. Paste a find, review the generated metadata, save it, then locate it again by title, description, category, or tag.
+SNOQ is a private knowledge vault for links and documents. Save a resource, let AI prepare a first draft of its metadata, make the final edits, and return to it later through search, categories, lists, favorites, and sharing.
 
-## What is included
+## Product capabilities
 
-- Email/password accounts with bcrypt hashing, server-issued HTTP-only session cookies, protected routes, and query scoping to the authenticated user.
-- Google identity-token sign-in endpoint, enabled only when Google OAuth settings are configured.
-- URL ingestion with URL normalization, duplicate detection, metadata extraction, SSRF guards, and a manual-save fallback.
-- Cloudinary-backed document uploads. Temporary request buffers are never used as permanent storage.
-- Gemini and OpenRouter adapters behind one `AIProvider` contract. The server selects a configured primary provider and tries one eligible fallback; the React client only receives normalized analysis data.
-- Editable AI suggestions, local unsaved drafts, dashboard metrics/charts, search, favorites, archive/restore, and provider-safe settings status.
+- Secure email/password and Google sign-in using server-issued HTTP-only session cookies.
+- URL and document capture with AI-assisted metadata, editable drafts, manual-save fallback, upload validation, and Cloudinary-backed file storage.
+- Personal library, search, category filters derived from saved data, lists, favorites, archive/restore, dashboard analytics, and responsive layouts.
+- Public and restricted list sharing. Restricted viewers request access, owners approve it, and both parties receive branded email notifications.
+- Configurable subscriptions with Razorpay checkout, AI-credit allowances, coupon redemption, subscription visibility, and usage indicators.
+- Administrator controls for plans, coupons, targeted email/SMS announcements, user roles, suspension, and account removal.
+- Administrator-only PDF and Excel reports covering account status, subscriptions, coupon status, redemptions, and high-level system metrics.
+- Configurable paid-plan reporting. A signed-in user on an eligible plan can export an entire vault or selected list as PDF/Excel, or email a branded PDF attachment only to their own account address.
 
 ## Architecture
 
 ```text
-SNOQ React/Vite static app → Express REST API → Prisma → Neon PostgreSQL
-                              ├→ URL extraction → AI provider router → Gemini / OpenRouter
-                              └→ Cloudinary document storage
+React / Vite client
+        │ credentialed HTTPS requests
+        ▼
+Express REST API ── Prisma ── PostgreSQL / Neon
+        ├── URL extraction and AI provider router (Gemini / OpenRouter)
+        ├── Cloudinary document and avatar storage
+        ├── Resend email and optional Twilio SMS
+        ├── Razorpay subscriptions and signed webhooks
+        └── Protected administrator reporting (Excel / PDF)
 ```
 
-The client is deployable as a Render Static Site. The Express app is a separate Render service. All secrets remain in backend environment variables.
+The frontend can be deployed as a Render Static Site and the API as a separate Render Web Service. Secrets belong only in the API environment.
 
-## Project layout
+## Repository layout
 
-- `client/` — React, Vite, TypeScript, Tailwind, React Router, TanStack Query, React Hook Form-ready UI, Recharts.
-- `server/` — Express, TypeScript, Zod validation, Prisma, authentication, ingestion and provider adapters.
-- `server/prisma/` — PostgreSQL schema, migration, and optional category seed.
+- `client/` — React, TypeScript, Vite, Tailwind, React Router, TanStack Query, charts, and responsive UI.
+- `server/` — Express, Zod, Prisma, authentication, resource ingestion, billing, sharing, email/SMS, and report generation.
+- `server/prisma/` — PostgreSQL schema, migrations, and optional seeds.
+- `SECURITY_AUDIT_REPORT.md` — hardening work, release checks, and residual operational controls.
+- `SETUP.md` and `DEPLOY.md` — local development and production release guides.
 
-## Getting started
+## Local development
 
-See [SETUP.md](SETUP.md) for credentials, migrations, and local commands. Copy `server/.env.example` to `server/.env`, and `client/.env.example` to `client/.env.local`.
+See [SETUP.md](SETUP.md) for the full environment variable list and external-service configuration.
 
 ```bash
 npm install
@@ -38,9 +48,20 @@ npm run db:migrate
 npm run dev
 ```
 
-## Provider routing
+The client normally runs on `http://localhost:5173` and the API on `http://localhost:4000`.
 
-Set `AI_PRIMARY_PROVIDER=gemini` and, optionally, `AI_FALLBACK_PROVIDER=openrouter`. Configure each provider's key and model independently. Rate limits, quota exhaustion, provider errors, timeouts, model errors, invalid responses, and credentials errors are eligible for one fallback attempt. Malformed requests are not retried blindly. If analysis is unavailable, the server returns manual-mode metadata and Save remains available.
+## Administrator reports
+
+An authenticated administrator can open **Admin panel → Admin reports** and download:
+
+- **Excel** — an overview plus complete Users, Subscriptions, and Coupons worksheets. It includes account state, roles, resource counts, plan status, coupon validity, and redemption usage.
+- **PDF** — a polished management snapshot with active/suspended user counts, resource and subscription metrics, recent accounts, and coupon status.
+
+Exports are generated by the API from current database records, use private/no-store response headers, require administrator authorization, and are rate-limited by `REPORT_RATE_LIMIT_MAX` (default: 20 per hour). Detailed export sheets are intentionally capped at 10,000 rows per data set; the overview calls out when a cap is reached.
+
+## Personal exports by email
+
+From **Settings → Your data reports**, an authenticated user on an eligible plan can choose the entire vault or one of their lists. They can download **PDF or Excel**, or request an email containing either attachment format. PDF reports have an elegant white, tabular layout with clickable **Open** buttons for URL resources. The API never accepts an arbitrary recipient: it sends only to the email address on the current authenticated account. This is protected by authentication, owner-scoped list lookup, plan-entitlement checks, no-store download headers, and `USER_EXPORT_RATE_LIMIT_MAX` (default: 5 per hour).
 
 ## Verification
 
@@ -49,6 +70,11 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm audit --omit=dev
 ```
 
-See [DEPLOY.md](DEPLOY.md) for Render, Neon, Cloudinary, OAuth, and provider switching. See [INTERVIEWS.md](INTERVIEWS.md) for implementation-specific discussion points.
+The API health endpoint is public and intentionally minimal: `GET /health` returns `{ "ok": true }`. It is suitable for Render health checks and does not disclose database, provider, account, or build details.
+
+The release test suite covers URL/SSRF validation, upload signature validation, report rendering (including empty exports), administrator-report rendering, the public health response, security headers, and blocked cross-origin API writes.
+
+Use `npm run db:deploy` during a production release. See [DEPLOY.md](DEPLOY.md) for Render, Neon, Cloudinary, OAuth, email, Razorpay, webhook, and production-cookie configuration.
